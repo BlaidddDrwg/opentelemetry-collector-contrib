@@ -29,7 +29,7 @@ func TestGroupingFileExporterShutdownReportsFlushErrors(t *testing.T) {
 	conf.FlushInterval = time.Hour
 	conf.GroupBy.MaxOpenFiles = 2
 
-	gfe := newFileExporter(conf, zap.NewNop()).(*groupingFileExporter)
+	gfe := newFileExporter(conf, zap.NewNop(), nil).(*groupingFileExporter)
 	require.NoError(t, gfe.Start(t.Context(), componenttest.NewNopHost()))
 
 	firstErr := errors.New("first disk full")
@@ -83,7 +83,7 @@ func TestGroupingFileExporterPreservesInFlightWrite(t *testing.T) {
 	tmpDir := t.TempDir()
 	conf := newEvictionTestConfig(tmpDir)
 
-	gfe, ok := newFileExporter(conf, zap.NewNop()).(*groupingFileExporter)
+	gfe, ok := newFileExporter(conf, zap.NewNop(), nil).(*groupingFileExporter)
 	require.True(t, ok)
 	require.NoError(t, gfe.Start(t.Context(), componenttest.NewNopHost()))
 
@@ -137,7 +137,7 @@ func TestGroupingFileExporterConcurrentEviction(t *testing.T) {
 	tmpDir := t.TempDir()
 	conf := newEvictionTestConfig(tmpDir)
 
-	gfe, ok := newFileExporter(conf, zap.NewNop()).(*groupingFileExporter)
+	gfe, ok := newFileExporter(conf, zap.NewNop(), nil).(*groupingFileExporter)
 	require.True(t, ok)
 	require.NoError(t, gfe.Start(t.Context(), componenttest.NewNopHost()))
 

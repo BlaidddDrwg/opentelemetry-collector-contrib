@@ -39,3 +39,19 @@ func (bwc *bufferedWriteCloser) Close() error {
 func (bwc *bufferedWriteCloser) flush() error {
 	return bwc.buffered.Flush()
 }
+
+// syncingWriteCloser syncs after the outer buffer/compressor has finalized its data.
+type syncingWriteCloser struct {
+	file interface {
+		io.WriteCloser
+		Sync() error
+	}
+}
+
+func (w *syncingWriteCloser) Write(p []byte) (int, error) {
+	return w.file.Write(p)
+}
+
+func (w *syncingWriteCloser) Close() error {
+	return errors.Join(w.file.Sync(), w.file.Close())
+}

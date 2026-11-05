@@ -22,6 +22,7 @@ type fileExporter struct {
 	logger     *zap.Logger
 	marshaller *marshaller
 	writer     *fileWriter
+	format     *fileFormat
 }
 
 func (e *fileExporter) consumeTraces(_ context.Context, td ptrace.Traces) error {
@@ -58,6 +59,9 @@ func (e *fileExporter) consumeProfiles(_ context.Context, pd pprofile.Profiles) 
 
 // Start starts the flush timer if set.
 func (e *fileExporter) Start(_ context.Context, host component.Host) error {
+	if err := e.format.validate(e.conf.Rotation); err != nil {
+		return err
+	}
 	marshaller, err := newMarshaller(e.conf, host)
 	if err != nil {
 		return err
@@ -80,11 +84,12 @@ func (e *fileExporter) Start(_ context.Context, host component.Host) error {
 		return migrateErr
 	}
 
-	writer, err := newFileWriter(e.conf.Path, e.conf.Append, e.conf.Rotation, e.conf.FlushInterval, export, e.conf.Compression, int(e.conf.CompressionParams.Level))
+	writer, err := newFileWriter(e.conf.Path, e.conf.Append, e.conf.Rotation, e.conf.FlushInterval, e.conf.SyncInterval, export, e.conf.Compression, int(e.conf.CompressionParams.Level), e.format)
 	if err != nil {
 		return err
 	}
 	e.writer = writer
+	e.writer.logger = e.logger
 	e.writer.start()
 	return nil
 }

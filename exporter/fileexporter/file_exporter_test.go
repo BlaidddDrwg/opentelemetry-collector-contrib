@@ -130,7 +130,7 @@ func TestFileTracesExporter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := tt.args.conf
-			feI := newFileExporter(conf, zap.NewNop())
+			feI := newFileExporter(conf, zap.NewNop(), nil)
 			require.IsType(t, &fileExporter{}, feI)
 			fe := feI.(*fileExporter)
 
@@ -795,7 +795,7 @@ func TestFlushing(t *testing.T) {
 	// Wrap the buffer with the buffered writer closer that implements flush() method.
 	bwc := newBufferedWriteCloser(buf)
 	// Create a file exporter with flushing enabled.
-	feI := newFileExporter(cfg, zap.NewNop())
+	feI := newFileExporter(cfg, zap.NewNop(), nil)
 	assert.IsType(t, &fileExporter{}, feI)
 	fe := feI.(*fileExporter)
 
@@ -811,7 +811,7 @@ func TestFlushing(t *testing.T) {
 	}
 	export := buildExportFunc(fe.conf)
 	var err error
-	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level))
+	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, fe.conf.SyncInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level), nil)
 	assert.NoError(t, err)
 	err = fe.writer.file.Close()
 	assert.NoError(t, err)
@@ -850,7 +850,7 @@ func TestAppend(t *testing.T) {
 	// Wrap the buffer with the buffered writer closer that implements flush() method.
 	bwc := newBufferedWriteCloser(buf)
 	// Create a file exporter with flushing enabled.
-	feI := newFileExporter(cfg, zap.NewNop())
+	feI := newFileExporter(cfg, zap.NewNop(), nil)
 	assert.IsType(t, &fileExporter{}, feI)
 	fe := feI.(*fileExporter)
 
@@ -866,7 +866,7 @@ func TestAppend(t *testing.T) {
 	}
 	export := buildExportFunc(fe.conf)
 	var err error
-	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level))
+	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, fe.conf.SyncInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level), nil)
 	assert.NoError(t, err)
 	err = fe.writer.file.Close()
 	assert.NoError(t, err)
@@ -892,7 +892,7 @@ func TestAppend(t *testing.T) {
 	assert.NoError(t, fe.Shutdown(ctx))
 
 	// Restart the exporter
-	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level))
+	fe.writer, err = newFileWriter(fe.conf.Path, fe.conf.Append, fe.conf.Rotation, fe.conf.FlushInterval, fe.conf.SyncInterval, export, fe.conf.Compression, int(fe.conf.CompressionParams.Level), nil)
 	assert.NoError(t, err)
 	err = fe.writer.file.Close()
 	assert.NoError(t, err)
@@ -930,7 +930,7 @@ func TestCreateDirectoryOption(t *testing.T) {
 			FormatType:      formatTypeJSON,
 			CreateDirectory: false,
 		}
-		exp, err := createLogsExporter(
+		exp, err := NewFactory().CreateLogs(
 			t.Context(),
 			exportertest.NewNopSettings(metadata.Type),
 			cfg,
@@ -951,7 +951,7 @@ func TestCreateDirectoryOption(t *testing.T) {
 			DirectoryPermissions: "0755",
 			FlushInterval:        time.Second,
 		}
-		exp, err := createLogsExporter(
+		exp, err := NewFactory().CreateLogs(
 			t.Context(),
 			exportertest.NewNopSettings(metadata.Type),
 			cfg,
@@ -1102,7 +1102,7 @@ func TestFileExporterShutdown(t *testing.T) {
 				FormatType:    formatTypeJSON,
 				FlushInterval: tt.flushInterval,
 			}
-			feI := newFileExporter(cfg, zap.NewNop())
+			feI := newFileExporter(cfg, zap.NewNop(), nil)
 			require.IsType(t, &fileExporter{}, feI)
 			fe := feI.(*fileExporter)
 
@@ -1129,7 +1129,7 @@ func TestFileExporterShutdownBeforeStart(t *testing.T) {
 		Path:       tempFileName(t),
 		FormatType: formatTypeJSON,
 	}
-	feI := newFileExporter(cfg, zap.NewNop())
+	feI := newFileExporter(cfg, zap.NewNop(), nil)
 	require.IsType(t, &fileExporter{}, feI)
 	fe := feI.(*fileExporter)
 

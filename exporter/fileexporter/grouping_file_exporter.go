@@ -34,6 +34,7 @@ type groupingFileExporter struct {
 	maxOpenFiles  int
 	dirPerm       os.FileMode
 	newFileWriter func(path string) (*fileWriter, error)
+	format        *fileFormat
 
 	mutex   sync.Mutex
 	writers *simplelru.LRU[string, *fileWriter]
@@ -285,6 +286,9 @@ func group[T any](e *groupingFileExporter, groups map[string][]T, resource pcomm
 
 // Start initializes and starts the exporter.
 func (e *groupingFileExporter) Start(_ context.Context, host component.Host) error {
+	if err := e.format.validate(e.conf.Rotation); err != nil {
+		return err
+	}
 	var err error
 	e.marshaller, err = newMarshaller(e.conf, host)
 	if err != nil {
@@ -304,7 +308,12 @@ func (e *groupingFileExporter) Start(_ context.Context, host component.Host) err
 	e.pathSuffix = filepath.ToSlash(pathParts[1])
 	e.maxOpenFiles = e.conf.GroupBy.MaxOpenFiles
 	e.newFileWriter = func(path string) (*fileWriter, error) {
-		return newFileWriter(path, e.conf.Append, e.conf.Rotation, e.conf.FlushInterval, export, e.conf.Compression, int(e.conf.CompressionParams.Level))
+		writer, writerErr := newFileWriter(path, e.conf.Append, e.conf.Rotation, e.conf.FlushInterval, e.conf.SyncInterval, export, e.conf.Compression, int(e.conf.CompressionParams.Level), e.format)
+		if writerErr != nil {
+			return nil, writerErr
+		}
+		writer.logger = e.logger
+		return writer, nil
 	}
 
 	writers, err := simplelru.NewLRU(e.conf.GroupBy.MaxOpenFiles, e.onEvict)

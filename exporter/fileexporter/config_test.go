@@ -19,6 +19,55 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter/internal/metadata"
 )
 
+func TestSyncIntervalConfig(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		values       map[string]any
+		wantInterval time.Duration
+		wantErr      string
+	}{
+		{
+			name: "positive sync interval",
+			values: map[string]any{
+				"path": "logs.pb", "sync_interval": "5s",
+			},
+			wantInterval: 5 * time.Second,
+		},
+		{
+			name: "disabled sync",
+			values: map[string]any{
+				"path": "logs.pb", "sync_interval": "0s",
+			},
+		},
+		{
+			name: "negative sync interval",
+			values: map[string]any{
+				"path": "logs.pb", "sync_interval": "-1s",
+			},
+			wantErr: "sync_interval must not be negative",
+		},
+		{
+			name: "rotation with sync",
+			values: map[string]any{
+				"path": "logs.pb", "sync_interval": "1s", "rotation": map[string]any{},
+			},
+			wantErr: "sync_interval is not supported with rotation",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := createDefaultConfig().(*Config)
+			require.NoError(t, confmap.NewFromStringMap(tt.values).Unmarshal(cfg))
+			err := cfg.Validate()
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantInterval, cfg.SyncInterval)
+		})
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	t.Parallel()
 

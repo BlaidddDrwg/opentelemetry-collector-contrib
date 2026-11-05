@@ -19,6 +19,12 @@
 
 Writes telemetry data to files on disk.
 
+For a standalone OTLP recording command that embeds this exporter, see [RecordReplay](../../cmd/recordreplay/README.md). It can replay its own versioned timestamp/payload recordings; generic file-exporter recordings are not that versioned format.
+
+Embedders can use `NewFactoryWithFrameWriter` to replace length-prefixed message writing with a callback receiving the output writer and encoded payload. The callback runs under the file writer's lock and must write a complete frame without retaining either argument. Buffering, compression, flushing, syncing, and file lifecycle remain the exporter's responsibility. Newline-delimited output is unaffected; `NewFactory()` retains its existing behavior.
+
+`NewFactoryWithFileFormat` additionally accepts a file-header writer. It runs when opening an empty file, including after truncation and sessions without telemetry, but is not repeated when appending to a nonempty file. A custom file header cannot be combined with rotation. The embedder is responsible for validating existing headers before append and ensuring its selected encodings are compatible with its format.
+
 Use the [OTLP JSON File receiver](../../receiver/otlpjsonfilereceiver/README.md) to read the data back into the collector. It only reads uncompressed, newline-delimited OTLP JSON (the default `format: json` without `compression` or `encoding`, see [File Format](#file-format)).
 
 The exporter supports the following features:
@@ -54,6 +60,8 @@ The following settings are required:
 - `path` [no default]: where to write information.
 
 The following settings are optional:
+
+- `sync_interval`[default: 0 (disabled)]: a positive duration such as `5s` flushes buffers and syncs file data to storage periodically, and enables syncing on close after buffer/compression finalization. Negative values and combining this setting with `rotation` are rejected. Flush/sync errors are logged and returned by subsequent exports and shutdown. Syncing adds storage latency and may reduce throughput.
 
 - `rotation` settings to rotate telemetry files. Rotation is only enabled when `rotation:` is present in the config.
 
@@ -155,7 +163,7 @@ Grouping by attribute currently only supports a **single** **resource** attribut
 - `group_by` always creates missing directories, whatever the value of `create_directory`.
 - With `group_by`, a file evicted because of `max_open_files` is truncated when reopened, unless `append: true` or `rotation` is set.
 - Without the `exporter.file.nativeCompression` feature gate, `compression_params.level` is ignored and the zstd default level is used.
-- Files are not fsynced. Written data may be lost if the host crashes before the OS flushes it to disk.
+- Files are not fsynced unless a positive `sync_interval` is configured. Even then, writes since the last successful sync can be lost on a host crash. Parent-directory entries are not synced, and guarantees depend on the underlying storage honoring sync operations.
 - The exporter does not support `sending_queue`, `retry_on_failure` or `timeout`.
 
 ## Telemetry

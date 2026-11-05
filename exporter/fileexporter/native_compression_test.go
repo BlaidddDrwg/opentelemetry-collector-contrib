@@ -182,7 +182,7 @@ func TestLegacyCompression_WhenFeatureGateDisabled(t *testing.T) {
 		Compression: compressionZSTD,
 	}
 
-	feI := newFileExporter(conf, zap.NewNop())
+	feI := newFileExporter(conf, zap.NewNop(), nil)
 	require.IsType(t, &fileExporter{}, feI)
 	fe := feI.(*fileExporter)
 

@@ -67,6 +67,9 @@ type Config struct {
 	// See time.ParseDuration for valid values.
 	FlushInterval time.Duration `mapstructure:"flush_interval"`
 
+	// SyncInterval flushes buffers and syncs the file to storage. Zero disables syncing.
+	SyncInterval time.Duration `mapstructure:"sync_interval"`
+
 	// GroupBy enables writing to separate files based on a resource attribute.
 	GroupBy *GroupBy `mapstructure:"group_by"`
 
@@ -142,6 +145,12 @@ func (cfg *Config) Validate() error {
 	}
 	if cfg.FlushInterval < 0 {
 		return errors.New("flush_interval must be larger than zero")
+	}
+	if cfg.SyncInterval < 0 {
+		return errors.New("sync_interval must not be negative")
+	}
+	if cfg.SyncInterval > 0 && cfg.Rotation != nil {
+		return errors.New("sync_interval is not supported with rotation")
 	}
 
 	if cfg.GroupBy != nil && cfg.GroupBy.Enabled {

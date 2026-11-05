@@ -184,6 +184,7 @@ module-sets:
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/xspanlink
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/xottl
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest
+      - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/recordreplay
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/sampling
       - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/semconvtest
@@ -363,6 +364,7 @@ module-sets:
       - github.com/open-telemetry/opentelemetry-collector-contrib/testbed/mockdatasenders/mockdatadogagentexporter
 
 excluded-modules:
+  - github.com/open-telemetry/opentelemetry-collector-contrib/cmd/recordreplay
   - github.com/open-telemetry/opentelemetry-collector-contrib/cmd/otelcontribcol
   - github.com/open-telemetry/opentelemetry-collector-contrib/cmd/oteltestbedcol
   - github.com/open-telemetry/opentelemetry-collector-contrib/internal/tools
