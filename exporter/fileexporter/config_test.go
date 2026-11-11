@@ -17,42 +17,48 @@ import (
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter/internal/metadata"
+	"strconv"
 )
 
+type TestParams map[string]any
+type TestConfig struct {
+	name         string
+	values       TestParams
+	wantInterval time.Duration
+	wantErr      string `default:""`
+}
+
+func DefaultTestParams(interval int) TestParams {
+	return TestParams{
+		"path":          "logs.pb",
+		"sync_interval": strconv.Itoa(interval) + "s",
+	}
+}
+
+func CreateTestConfig(name string, extraParams map[string]any, interval int, wantErr string) TestConfig {
+	params := DefaultTestParams(interval)
+	if len(extraParams) > 0 {
+		for key, value := range extraParams {
+			params[key] = value
+		}
+	}
+	config := TestConfig{
+		name:         name,
+		values:       params,
+		wantInterval: time.Duration(interval) * time.Second,
+		wantErr:      wantErr,
+	}
+
+	return config
+}
+
 func TestSyncIntervalConfig(t *testing.T) {
-	for _, tt := range []struct {
-		name         string
-		values       map[string]any
-		wantInterval time.Duration
-		wantErr      string
-	}{
-		{
-			name: "positive sync interval",
-			values: map[string]any{
-				"path": "logs.pb", "sync_interval": "5s",
-			},
-			wantInterval: 5 * time.Second,
-		},
-		{
-			name: "disabled sync",
-			values: map[string]any{
-				"path": "logs.pb", "sync_interval": "0s",
-			},
-		},
-		{
-			name: "negative sync interval",
-			values: map[string]any{
-				"path": "logs.pb", "sync_interval": "-1s",
-			},
-			wantErr: "sync_interval must not be negative",
-		},
-		{
-			name: "rotation with sync",
-			values: map[string]any{
-				"path": "logs.pb", "sync_interval": "1s", "rotation": map[string]any{},
-			},
-			wantErr: "sync_interval is not supported with rotation",
-		},
+	rotationParam := map[string]any{"rotation": map[string]any{}}
+	for _, tt := range []TestConfig{
+		CreateTestConfig("positive sync interval", nil, 5, ""),
+		CreateTestConfig("disabled sync", nil, 0, ""),
+		CreateTestConfig("negative sync interval", nil, 0, ""),
+		CreateTestConfig("rotation with sync", rotationParam, 1, "sync_interval is not supported with rotation"),
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := createDefaultConfig().(*Config)
